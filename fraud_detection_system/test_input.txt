@@ -1,0 +1,8 @@
+1,100,Payment
+2,5000,offshore transfer
+1,200,Payment
+1,300,Payment
+1,400,Payment
+9999,10,test
+3,50,Normal
+4,1000,crypto investment
