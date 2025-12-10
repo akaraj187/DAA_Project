@@ -396,7 +396,8 @@
 
         // --- Main App Logic ---
 
-        const STORAGE_KEY = 'fraud_guard_history';
+        const currentUsername = "{{ current_user.username if current_user.is_authenticated else 'guest' }}";
+        const STORAGE_KEY = `fraud_guard_history_${currentUsername}`;
         let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
         renderHistory();
