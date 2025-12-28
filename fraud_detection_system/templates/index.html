@@ -397,10 +397,25 @@
         // --- Main App Logic ---
 
         const currentUsername = "{{ current_user.username if current_user.is_authenticated else 'guest' }}";
-        const STORAGE_KEY = `fraud_guard_history_${currentUsername}`;
-        let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        // REMOVED: const STORAGE_KEY = ... (No longer using LocalStorage)
+        let history = []; // Will be populated from Server
 
-        renderHistory();
+        // Initial Load
+        if (currentUsername !== 'guest') {
+            fetchHistory();
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/get_history');
+                if (res.ok) {
+                    history = await res.json();
+                    renderHistory();
+                }
+            } catch (err) {
+                console.error("Failed to load history", err);
+            }
+        }
 
         async function analyzeTransactions() {
             const inputEl = document.getElementById('transactionInput');
@@ -440,7 +455,10 @@
                 if (!response.ok) throw new Error(await response.text());
                 const results = await response.json();
 
-                addToHistory(inputData, results);
+                // UPDATE: Instead of manually adding to array, just re-fetch from server
+                // This ensures we have the correct ID and Timestamp from the DB
+                await fetchHistory();
+                
                 renderResults(results);
 
             } catch (error) {
@@ -490,24 +508,7 @@
             stats.innerText = `Found ${fraudCount} suspicious transactions out of ${results.length} total.`;
         }
 
-        function addToHistory(input, results) {
-            const fraudCount = results.filter(r => r.is_suspicious).length;
-            const newItem = {
-                id: Date.now(),
-                timestamp: new Date().toLocaleTimeString(),
-                date: new Date().toLocaleDateString(),
-                input: input,
-                results: results,
-                fraudCount: fraudCount,
-                total: results.length
-            };
-
-            history.unshift(newItem);
-            if (history.length > 50) history.pop();
-
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-            renderHistory();
-        }
+        // REMOVED: function addToHistory (Not needed, server handles it)
 
         function renderHistory() {
             const container = document.getElementById('historyList');
@@ -540,11 +541,20 @@
             document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
         }
 
-        function clearHistory() {
-            if (confirm('Clear all history?')) {
-                history = [];
-                localStorage.removeItem(STORAGE_KEY);
-                renderHistory();
+        async function clearHistory() {
+            if (confirm('Clear all history? This cannot be undone.')) {
+                try {
+                    const res = await fetch('/clear_history', { method: 'POST' });
+                    if (res.ok) {
+                        history = [];
+                        renderHistory();
+                    } else {
+                        alert("Failed to clear history on server.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Network error clearing history.");
+                }
             }
         }
     </script>
