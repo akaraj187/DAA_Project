@@ -330,8 +330,18 @@
         <div class="main-content">
             <div class="glass-card">
                 <h2>New Analysis</h2>
-                <textarea id="transactionInput"
-                    placeholder="Enter transactions (ID,Amount,Description)...&#10;1001,500,Normal Payment&#10;2002,9999,Offshore unknown"></textarea>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 5px; display: block;">MANUAL ENTRY (ID, Amount, Description)</label>
+                    <textarea id="transactionInput"
+                        placeholder="1001, 500, Normal Payment&#10;2002, 9999, Offshore unknown"></textarea>
+                </div>
+                
+                <div style="margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; display: block;">OR UPLOAD CSV</label>
+                    <input type="file" id="csvFile" accept=".csv" style="color: var(--text-main); font-size: 13px;">
+                </div>
+
                 <button class="primary-btn" onclick="analyzeTransactions()" id="analyzeBtn">
                     Run Detection Engine
                 </button>
@@ -419,11 +429,14 @@
 
         async function analyzeTransactions() {
             const inputEl = document.getElementById('transactionInput');
+            const fileEl = document.getElementById('csvFile');
             const btn = document.getElementById('analyzeBtn');
-            const inputData = inputEl.value;
+            
+            const manualData = inputEl.value.trim();
+            const fileData = fileEl.files[0];
 
-            if (!inputData.trim()) {
-                alert("Please enter transaction data.");
+            if (!manualData && !fileData) {
+                alert("Please enter data or upload a CSV file.");
                 return;
             }
 
@@ -440,11 +453,21 @@
                 // Fake delay to show off animation (User requested "animated" feel)
                 await new Promise(r => setTimeout(r, 1500));
 
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data: inputData })
-                });
+                let response;
+                if (fileData) {
+                    const formData = new FormData();
+                    formData.append('file', fileData);
+                    response = await fetch('/analyze', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    response = await fetch('/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: manualData })
+                    });
+                }
 
                 if (response.status === 401) {
                     alert("Session expired. Please login again.");
@@ -460,6 +483,10 @@
                 await fetchHistory();
                 
                 renderResults(results);
+                
+                // Clear inputs
+                if (fileData) fileEl.value = '';
+                // Optional: Don't clear manual input immediately in case they want to edit
 
             } catch (error) {
                 alert("Error: " + error.message);
@@ -494,7 +521,13 @@
                 tr.innerHTML = `
                     <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">#${t.id}</td>
                     <td>$${t.amount.toLocaleString()}</td>
-                    <td>${t.description}</td>
+                    <td>
+                        <div style="font-weight: 500;">${t.description}</div>
+                        ${t.time || t.payment_mode ? 
+                          `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                             ${t.time || ''} ${t.payment_mode ? '• ' + t.payment_mode : ''}
+                           </div>` : ''}
+                    </td>
                     <td>
                         <span class="status-badge ${t.is_suspicious ? 'status-fraud' : 'status-clean'}">
                             ${t.is_suspicious ? 'DETECTED' : 'SAFE'}

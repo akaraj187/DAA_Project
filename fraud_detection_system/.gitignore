@@ -1,0 +1,33 @@
+# C++ Compiled Binaries
+*.o
+*.obj
+*.exe
+fraud_engine
+a.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+instance/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local Dev / Documentation Files (Keep local, ignore in Repo)
+*.bat
+compile.sh
+inspect_db.py
+verify_auth_test.py
+test_input.txt
+project_chart.html
+project_documentation.txt
+CheatSheet_Roadmap.md

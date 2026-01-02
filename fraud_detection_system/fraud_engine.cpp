@@ -13,6 +13,8 @@ struct Transaction {
     string id;
     double amount;
     string description;
+    string time;
+    string payment_mode;
     
     // For manual JSON serialization
     string toJson(bool suspicious, const string& reason) const {
@@ -21,6 +23,8 @@ struct Transaction {
         ss << "\"id\": \"" << id << "\", ";
         ss << "\"amount\": " << amount << ", ";
         ss << "\"description\": \"" << description << "\", ";
+        ss << "\"time\": \"" << time << "\", ";
+        ss << "\"payment_mode\": \"" << payment_mode << "\", ";
         ss << "\"is_suspicious\": " << (suspicious ? "true" : "false") << ", ";
         ss << "\"reason\": \"" << reason << "\"";
         ss << "}";
@@ -159,39 +163,46 @@ int main() {
     vector<Transaction> transactions;
     string line;
     
-    // Simple CSV parser: ID,Amount,Description
-    while (getline(cin, line)) {
-        if (line.empty()) continue;
-        
-        stringstream ss(line);
-        string segment;
-        vector<string> parts;
-        
-        while(getline(ss, segment, ',')) {
-            parts.push_back(segment);
-        }
-        
-        if (parts.size() >= 3) {
-            Transaction t;
-            t.id = parts[0];
-            try {
-                t.amount = stod(parts[1]);
-            } catch (...) {
-                t.amount = 0.0;
-            }
-            // Description might contain commas, so we should join the rest if split, 
-            // but for simple CSV assumption we take 3rd part. 
-            // Ideally handle real CSV but this assumes simple format.
-            t.description = parts[2];
-            for (size_t i = 3; i < parts.size(); ++i) {
-                t.description += "," + parts[i];
+            // Simple CSV parser: ID,Amount,Description,Time,PaymentMode
+        while (getline(cin, line)) {
+            if (line.empty()) continue;
+            
+            stringstream ss(line);
+            string segment;
+            vector<string> parts;
+            
+            while(getline(ss, segment, ',')) {
+                parts.push_back(segment);
             }
             
-            transactions.push_back(t);
-            frequencyMap[t.id]++;
+            // We now expect at least 3, ideally 5. If < 5, we fill with defaults.
+            if (parts.size() >= 3) {
+                Transaction t;
+                t.id = parts[0];
+                try {
+                    t.amount = stod(parts[1]);
+                } catch (...) {
+                    t.amount = 0.0;
+                }
+                t.description = parts[2];
+                
+                // Handle optional extra columns if present
+                if (parts.size() >= 4) t.time = parts[3];
+                else t.time = "00:00";
+                
+                if (parts.size() >= 5) t.payment_mode = parts[4];
+                else t.payment_mode = "unknown";
+    
+                // If description was split by comma (and we didn't have 5 columns explicitly), 
+                // logic gets messy. For this system, we assume the Pre-Processor (Python) 
+                // guarantees the format or we accept simple CSV rules.
+                // Let's stick to: If > 5 parts, the rest are ignored or part of description?
+                // To be safe, let's assume the Python script normalizes the input to exactly 5 columns.
+                
+                transactions.push_back(t);
+                frequencyMap[t.id]++;
+            }
         }
-    }
-
     // 4. Analyze and Output JSON
     cout << "[";
     for (size_t i = 0; i < transactions.size(); ++i) {

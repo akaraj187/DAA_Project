@@ -7,6 +7,8 @@ from authlib.integrations.flask_client import OAuth
 import subprocess
 import os
 import json
+import pandas as pd
+import io
 
 app = Flask(__name__)
 # Use environment variable for Secret Key (with fallback)
@@ -124,10 +126,83 @@ def logout():
 @app.route('/analyze', methods=['POST'])
 @login_required
 def analyze():
-    # Get raw text from the request
-    data = request.json.get('data', '')
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
+    csv_input = ""
+    raw_input_storage = ""
+
+    # Check for File Upload (multipart/form-data) or JSON
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        if 'file' not in request.files:
+             return jsonify({"error": "No file part"}), 400
+        file = request.files['file']
+        if file.filename == '':
+             return jsonify({"error": "No selected file"}), 400
+             
+        try:
+            # Read CSV with Pandas
+            df = pd.read_csv(file)
+            
+            # --- Data Cleaning & Normalization ---
+            # Standardize headers
+            df.columns = df.columns.str.strip().str.lower()
+            
+            # Prepare target structure
+            expected_cols = ['id', 'amount', 'description', 'time', 'payment_mode']
+            final_df = pd.DataFrame()
+            
+            # Intelligent Column Mapping
+            for target in expected_cols:
+                # 1. Exact match
+                if target in df.columns:
+                    final_df[target] = df[target]
+                else:
+                    # 2. Fuzzy/Keyword match
+                    match = next((c for c in df.columns if target in c), None)
+                    if match:
+                         final_df[target] = df[match]
+                    else:
+                        # 3. Defaults
+                        if target == 'amount': final_df[target] = 0.0
+                        elif target == 'time': final_df[target] = datetime.now().strftime("%H:%M")
+                        elif target == 'payment_mode': final_df[target] = "Unknown"
+                        else: final_df[target] = "N/A" # id, description
+
+            # Clean Values
+            final_df['amount'] = pd.to_numeric(final_df['amount'], errors='coerce').fillna(0.0)
+            final_df.fillna("Unknown", inplace=True)
+            
+            # Generate CSV string for C++ Engine (No Header)
+            csv_input = final_df.to_csv(index=False, header=False)
+            
+            # Store summary for history
+            raw_input_storage = f"File Upload: {file.filename} ({len(df)} transactions)"
+            
+        except Exception as e:
+            return jsonify({"error": f"CSV Processing Error: {str(e)}"}), 500
+
+    else:
+        # JSON / Manual Text Input
+        data = request.json.get('data', '')
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Parse manual lines and pad to 5 columns
+        lines = data.strip().split('\n')
+        processed_lines = []
+        for line in lines:
+            if not line.strip(): continue
+            parts = [p.strip() for p in line.split(',')]
+            
+            # Ensure at least ID, Amount, Desc
+            if len(parts) >= 3:
+                # Pad Time
+                if len(parts) < 4: parts.append(datetime.now().strftime("%H:%M"))
+                # Pad Payment Mode
+                if len(parts) < 5: parts.append("Manual")
+                
+                processed_lines.append(",".join(parts))
+        
+        csv_input = "\n".join(processed_lines)
+        raw_input_storage = data
 
     try:
         # Run the C++ executable
@@ -139,8 +214,8 @@ def analyze():
             text=True
         )
         
-        # Pass the data to the C++ engine
-        stdout, stderr = process.communicate(input=data)
+        # Pass the formatted CSV data to the C++ engine
+        stdout, stderr = process.communicate(input=csv_input)
         
         if process.returncode != 0:
             return jsonify({"error": f"Engine Error: {stderr}"}), 500
@@ -150,19 +225,16 @@ def analyze():
             result = json.loads(stdout)
             
             # --- SAVE TO DATABASE ---
-            # 1. Count how many suspicious items found
             fraud_detected = sum(1 for t in result if t.get('is_suspicious', False))
             
-            # 2. Create the Database Record
             new_history = TransactionHistory(
-                input_data=data,
-                analysis_result=json.dumps(result), # Convert JSON list back to string for storage
+                input_data=raw_input_storage,
+                analysis_result=json.dumps(result),
                 fraud_count=fraud_detected,
                 total_items=len(result),
                 user=current_user
             )
             
-            # 3. Save
             db.session.add(new_history)
             db.session.commit()
             # ------------------------
