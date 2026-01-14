@@ -6,6 +6,7 @@ This project is a full-stack fraud detection system that integrates a Python web
 ## System Architecture & Data Flow
 
 ### 1. User Input (Frontend)
+
 - **Interface:** The user interacts with the dashboard (`index.html`).
 - **Input Method:** Transactions are entered into a text area in CSV format (e.g., `1001,500,Offshore Payment`).
 - **Trigger:** Clicking "Run Detection Engine" executes the JavaScript `analyzeTransactions()` function.
@@ -47,15 +48,19 @@ The C++ engine serves as the core processing unit, executing three distinct algo
 - **Response:** Python captures this output and returns it to the frontend.
 - **Visualization:** JavaScript parses the response and dynamically updates the UI, highlighting suspicious transactions in red and safe ones in green based on the `is_suspicious` flag.
 
+- 
+
 ## 🚀 Setup & Installation
 
 Follow these steps to set up the project locally.
 
 ### 1. Clone the Repository
-```bash
-git clone <YOUR_REPO_URL_HERE>
-cd <YOUR_REPO_NAME>
+```
+git clone https://github.com/akaraj187/DAA_Project.git
+cd 'DAA Project'/fraud_detection_system
+```
 2. Create a Virtual Environment
+```
 It is recommended to use a virtual environment to manage dependencies.
 
 Mac / Linux:
@@ -70,7 +75,9 @@ Bash
 
 python -m venv venv
 venv\Scripts\activate
+```
 3. Build the Project
+```
 This step installs Python dependencies and compiles the C++ engine.
 
 Option A: Mac / Linux (Using build script)
