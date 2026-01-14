@@ -85,67 +85,81 @@ public:
     }
 };
 
-// --- Algorithm 2: KMP Algorithm ---
+// --- Algorithm 2: Boyer-Moore Algorithm ---
 
-// Function to compute the LPS (Longest Prefix Suffix) array
-vector<int> computeLPSArray(const string& pattern) {
-    int m = pattern.length();
-    vector<int> lps(m);
-    int len = 0;
-    lps[0] = 0;
-    int i = 1;
+class BoyerMoore {
+public:
+    static void badCharHeuristic(const string& str, int size, int badchar[256]) {
+        for (int i = 0; i < 256; i++)
+            badchar[i] = -1;
+        for (int i = 0; i < size; i++)
+            badchar[(int)str[i]] = i;
+    }
 
-    while (i < m) {
-        if (pattern[i] == pattern[len]) {
-            len++;
-            lps[i] = len;
-            i++;
-        } else {
-            if (len != 0) {
-                len = lps[len - 1];
+    static bool search(const string& pat, const string& txt) {
+        int m = pat.size();
+        int n = txt.size();
+        int badchar[256];
+
+        badCharHeuristic(pat, m, badchar);
+
+        int s = 0; 
+        while (s <= (n - m)) {
+            int j = m - 1;
+            while (j >= 0 && pat[j] == txt[s + j])
+                j--;
+
+            if (j < 0) {
+                return true; // Pattern found
             } else {
-                lps[i] = 0;
-                i++;
+                s += max(1, j - badchar[(int)txt[s + j]]);
             }
         }
+        return false;
     }
-    return lps;
-}
+};
 
-// KMP Search function
-bool KMPSearch(const string& pattern, const string& text) {
-    int m = pattern.length();
-    int n = text.length();
-    
-    if (m == 0) return false;
-    
-    vector<int> lps = computeLPSArray(pattern);
-    int i = 0; // index for text
-    int j = 0; // index for pattern
+// --- Algorithm 3: Rabin-Karp Algorithm ---
 
-    string lowerText = text;
-    string lowerPattern = pattern;
-    // Case insensitive comparison basics
-    transform(lowerText.begin(), lowerText.end(), lowerText.begin(), ::tolower);
-    transform(lowerPattern.begin(), lowerPattern.end(), lowerPattern.begin(), ::tolower);
+class RabinKarp {
+public:
+    static bool search(const string& pat, const string& txt, int q = 101) {
+        int M = pat.length();
+        int N = txt.length();
+        int i, j;
+        int p = 0; // hash value for pattern
+        int t = 0; // hash value for txt
+        int h = 1;
+        int d = 256; // number of characters in the input alphabet
 
-    while (i < n) {
-        if (lowerPattern[j] == lowerText[i]) {
-            j++;
-            i++;
+        if (M > N) return false;
+
+        for (i = 0; i < M - 1; i++)
+            h = (h * d) % q;
+
+        for (i = 0; i < M; i++) {
+            p = (d * p + pat[i]) % q;
+            t = (d * t + txt[i]) % q;
         }
 
-        if (j == m) {
-            return true; // Pattern found
-        } else if (i < n && lowerPattern[j] != lowerText[i]) {
-            if (j != 0)
-                j = lps[j - 1];
-            else
-                i = i + 1;
+        for (i = 0; i <= N - M; i++) {
+            if (p == t) {
+                for (j = 0; j < M; j++) {
+                    if (txt[i + j] != pat[j])
+                        break;
+                }
+                if (j == M)
+                    return true;
+            }
+            if (i < N - M) {
+                t = (d * (t - txt[i] * h) + txt[i + M]) % q;
+                if (t < 0)
+                    t = (t + q);
+            }
         }
+        return false;
     }
-    return false;
-}
+};
 
 // --- Main Engine ---
 
@@ -217,25 +231,53 @@ int main() {
         }
         
         // Check 2: High Frequency (Hashing)
-        // Note: The prompt says "If an ID appears more than 3 times".
-        // This means if total count > 3, ALL transactions for that ID are suspicious?
-        // Or just the 4th onwards? "flag all its transactions" -> ALL.
         if (!suspicious && frequencyMap[t.id] > 3) {
             suspicious = true;
             reason = "High Frequency Fraud (Hashing)";
         }
 
-        // Check 3: Keywords (KMP)
+        // Check 3: Keywords (Boyer-Moore & Rabin-Karp)
         if (!suspicious) {
-            if (KMPSearch("crypto", t.description)) {
+            // Case insensitive preprocessing
+            string lowerDesc = t.description;
+            transform(lowerDesc.begin(), lowerDesc.end(), lowerDesc.begin(), ::tolower);
+
+            // Boyer-Moore for keyword matches
+            if (BoyerMoore::search("crypto", lowerDesc)) {
                 suspicious = true;
-                reason = "KMP Match: 'crypto'";
-            } else if (KMPSearch("offshore", t.description)) {
+                reason = "Boyer-Moore Match: 'crypto'";
+            } else if (BoyerMoore::search("offshore", lowerDesc)) {
                 suspicious = true;
-                reason = "KMP Match: 'offshore'";
-            } else if (KMPSearch("bet", t.description)) {
+                reason = "Boyer-Moore Match: 'offshore'";
+            } else if (BoyerMoore::search("gambling", lowerDesc)) {
                 suspicious = true;
-                reason = "KMP Match: 'bet'";
+                reason = "Boyer-Moore Match: 'gambling'";
+            } else if (BoyerMoore::search("swiss", lowerDesc)) {
+                suspicious = true;
+                reason = "Boyer-Moore Match: 'swiss'";
+            } else if (BoyerMoore::search("fantasy", lowerDesc)) {
+                suspicious = true;
+                reason = "Boyer-Moore Match: 'fantasy'";
+            } else if (BoyerMoore::search("stocks", lowerDesc)) {
+                suspicious = true;
+                reason = "Boyer-Moore Match: 'stocks'";
+            } else if (BoyerMoore::search("intraday", lowerDesc)) {
+                suspicious = true;
+                reason = "Boyer-Moore Match: 'intraday'";
+            } else if (BoyerMoore::search("trading", lowerDesc)) {
+                suspicious = true;
+                reason = "Boyer-Moore Match: 'trading'";
+            }
+            // Rabin-Karp for shorter/specific keywords
+            else if (RabinKarp::search("bet", lowerDesc)) {
+                suspicious = true;
+                reason = "Rabin-Karp Match: 'bet'";
+            } else if (RabinKarp::search("stake", lowerDesc)) {
+                suspicious = true;
+                reason = "Rabin-Karp Match: 'stake'";
+            } else if (RabinKarp::search("forex", lowerDesc)) {
+                suspicious = true;
+                reason = "Rabin-Karp Match: 'forex'";
             }
         }
 

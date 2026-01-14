@@ -8,71 +8,33 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .links {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .links a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        .links a:hover {
-            text-decoration: underline;
-        }
-
-        .alert {
-            background: rgba(248, 113, 113, 0.1);
-            border: 1px solid rgba(248, 113, 113, 0.2);
-            color: var(--danger);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        /* Local overrides */
-        .auth-container {
-            display: flex;
-            height: 100vh;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6.0">
 </head>
 
-<body>
+<body class="auth-page register">
 
     <div class="auth-container">
         <div class="glass-card auth-card animate-in">
-            <h1 class="gradient-text" style="text-align: center; margin-bottom: 30px;">Register</h1>
+            <h1 class="gradient-text auth-title">Create Account</h1>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert">{{ message }}</div>
+            <div class="alert alert-{{ category }}">{{ message }}</div>
             {% endfor %}
             {% endif %}
             {% endwith %}
 
             <form method="POST">
-                <div style="margin-bottom: 20px;">
-                    <label
-                        style="display:block; margin-bottom:8px; color:var(--text-muted); font-size:14px;">Username</label>
+                <div class="form-group">
+                    <label>Username</label>
                     <input type="text" name="username" required autofocus>
                 </div>
-                <div style="margin-bottom: 20px;">
-                    <label
-                        style="display:block; margin-bottom:8px; color:var(--text-muted); font-size:14px;">Password</label>
+                <div class="form-group">
+                    <label>Password</label>
                     <input type="password" name="password" required>
                 </div>
-                <button type="submit" class="primary-btn" style="width: 100%;">Create Account</button>
+                <button type="submit" class="primary-btn full-width">Sign Up</button>
             </form>
 
             <div class="links">

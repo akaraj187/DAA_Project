@@ -4,413 +4,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FraudGuard AI | Advanced Detection</title>
+    <title>FraudGuard | Wallet Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Local overrides & Layout */
-        #welcome-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0f172a;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.8s ease;
-        }
-
-        #welcome-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        #scanning-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.9);
-            z-index: 900;
-            display: none;
-            /* Flex when active */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.3s;
-        }
-
-        /* Scanner animation */
-        .scanner {
-            width: 300px;
-            height: 300px;
-            border: 2px solid var(--primary);
-            border-radius: 50%;
-            position: relative;
-            animation: pulseRing 2s infinite;
-        }
-
-        .scanner::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 2px;
-            height: 150px;
-            background: linear-gradient(to bottom, var(--primary), transparent);
-            transform-origin: top left;
-            animation: scanRotate 2s linear infinite;
-        }
-
-        @keyframes pulseRing {
-            0% {
-                box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4);
-            }
-
-            70% {
-                box-shadow: 0 0 0 50px transparent;
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 transparent;
-            }
-        }
-
-        @keyframes scanRotate {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .scan-text {
-            margin-top: 20px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--primary);
-            letter-spacing: 2px;
-            animation: blink 0.5s infinite;
-        }
-
-        @keyframes blink {
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        #app-container {
-            display: flex;
-            height: 100vh;
-            opacity: 0;
-            transition: opacity 1s ease;
-        }
-
-        #app-container.visible {
-            opacity: 1;
-        }
-
-        /* Sidebar & Layout */
-        .sidebar {
-            width: 280px;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 40px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .user-nav {
-            position: absolute;
-            top: 20px;
-            right: 40px;
-            z-index: 10;
-            font-size: 14px;
-        }
-
-        .user-nav a {
-            color: var(--text-muted);
-            text-decoration: none;
-            margin-left: 15px;
-            transition: color 0.2s;
-        }
-
-        .user-nav a:hover {
-            color: var(--primary);
-        }
-
-        .user-nav .username {
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        .history-item {
-            padding: 12px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.03);
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .history-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            transform: translateX(2px);
-        }
-
-        .history-item.active {
-            border-color: var(--primary);
-            background: rgba(56, 189, 248, 0.1);
-        }
-
-        .history-time {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .history-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-        }
-
-        .count-badge.sus {
-            color: var(--danger);
-            font-weight: bold;
-        }
-
-        .clear-history-btn {
-            margin-top: auto;
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-
-        .clear-history-btn:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        /* Table Styles */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th {
-            text-align: left;
-            padding: 12px;
-            color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 500;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-            font-size: 14px;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .status-clean {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-        }
-
-        .status-fraud {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        tr.suspicious td {
-            background: rgba(239, 68, 68, 0.02);
-        }
-    </style>
+    <!-- Load v5.0 for Google Pay style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6.0">
 </head>
 
-<body>
+<body class="dashboard-page">
 
     <!-- Scanning Overlay -->
     <div id="scanning-overlay">
-        <div class="scanner"></div>
-        <div class="scan-text">SCANNING TRANSACTIONS...</div>
+        <div class="scanner-container">
+            <div class="scanner-ring"></div>
+            <div class="scanner-icon">🛡️</div>
+        </div>
+        <div class="scan-text">Analyzing Transactions...</div>
     </div>
 
-    <!-- Welcome Overlay -->
+    <!-- Welcome Overlay (Only for non-logged in or first load) -->
     <div id="welcome-screen">
-        <div class="welcome-content animate-in" style="text-align: center;">
-            <h1 class="gradient-text" style="font-size: 48px; margin-bottom: 10px;">FraudGuard AI</h1>
-            <p style="color: var(--text-muted); margin-bottom: 40px;">Advanced Transaction Analysis System</p>
-
-            <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 40px;">
-                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; width: 140px;">
-                    <div style="font-size: 24px; color: var(--primary); margin-bottom: 8px;">C++</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">High Performance Engine</div>
-                </div>
-                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; width: 140px;">
-                    <div style="font-size: 24px; color: #a855f7; margin-bottom: 8px;">AI</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Pattern Recognition</div>
-                </div>
+        <div class="welcome-content">
+            <div class="brand-logo">
+                <div class="logo-circle"></div>
+                <h1 class="brand-name">FraudGuard</h1>
             </div>
+            <p class="hero-subtitle">Secure your financial future.</p>
 
             {% if current_user.is_authenticated %}
-            <button class="primary-btn enter-prompt" onclick="enterApp()">Enter System</button>
+            <button class="primary-btn big-btn" onclick="enterApp()">Open Dashboard</button>
             {% else %}
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <a href="{{ url_for('login') }}" class="primary-btn" style="text-decoration: none;">Login</a>
-                <a href="{{ url_for('register') }}" class="primary-btn"
-                    style="text-decoration: none; background: transparent; border: 1px solid var(--border-color);">Register</a>
+            <div class="auth-buttons-column">
+                <a href="{{ url_for('login') }}" class="primary-btn big-btn">Log In</a>
+                <a href="{{ url_for('register') }}" class="secondary-btn big-btn">Create Account</a>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- App Container -->
+    <!-- Main Dashboard Container -->
     <div id="app-container">
-        <div class="user-nav">
-            {% if current_user.is_authenticated %}
-            <span class="username">{{ current_user.username }}</span>
-            <a href="{{ url_for('logout') }}">Logout</a>
-            {% else %}
-            <a href="{{ url_for('login') }}">Login</a>
-            <a href="{{ url_for('register') }}">Register</a>
-            {% endif %}
-        </div>
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h1>FraudGuard</h1>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">
-                Hybrid C++ Analysis Engine
-            </div>
-
-            <h2>History</h2>
-            <div class="history-list" id="historyList">
-                <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
-                    No history found
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="user-profile">
+                <div class="avatar-circle">
+                    {{ current_user.username[0] | upper if current_user.is_authenticated else 'G' }}
+                </div>
+                <div class="user-info">
+                    <span class="greeting">Hello,</span>
+                    <span class="username-display">{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
                 </div>
             </div>
+            <a href="{{ url_for('logout') }}" class="logout-icon" title="Logout">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </a>
+        </header>
 
-            <button class="clear-history-btn" onclick="clearHistory()">Clear History</button>
-        </div>
-
-        <!-- Content -->
-        <div class="main-content">
-            <div class="glass-card">
-                <h2>New Analysis</h2>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 5px; display: block;">MANUAL ENTRY (ID, Amount, Description)</label>
-                    <textarea id="transactionInput"
-                        placeholder="1001, 500, Normal Payment&#10;2002, 9999, Offshore unknown"></textarea>
+        <!-- Wallet / Status Card -->
+        <section class="wallet-section">
+            <div class="wallet-card">
+                <div class="card-top">
+                    <span>System Status</span>
+                    <span class="status-indicator online">Active</span>
                 </div>
-                
-                <div style="margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                    <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; display: block;">OR UPLOAD CSV</label>
-                    <input type="file" id="csvFile" accept=".csv" style="color: var(--text-main); font-size: 13px;">
+                <div class="card-balance">
+                    <span class="currency-symbol">🛡️</span>
+                    <span class="balance-amount">Protected</span>
                 </div>
+                <div class="card-bottom">
+                    <span class="card-number">•••• •••• •••• AI-24</span>
+                    <span class="card-type">C++ Engine</span>
+                </div>
+                <div class="card-blob"></div>
+            </div>
+        </section>
 
-                <button class="primary-btn" onclick="analyzeTransactions()" id="analyzeBtn">
-                    Run Detection Engine
+        <!-- Quick Actions Grid -->
+        <section class="actions-section">
+            <h3 class="section-title">Quick Actions</h3>
+            <div class="actions-grid">
+                <button class="action-btn" onclick="openModal('manual')">
+                    <div class="icon-box blue">📝</div>
+                    <span>Manual Entry</span>
+                </button>
+                <button class="action-btn" onclick="triggerFileUpload()">
+                    <div class="icon-box purple">📂</div>
+                    <span>Upload CSV</span>
+                </button>
+                <button class="action-btn" onclick="clearHistory()">
+                    <div class="icon-box orange">🗑️</div>
+                    <span>Clear History</span>
                 </button>
             </div>
+            <!-- Hidden File Input -->
+            <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleFileUpload(this)">
+        </section>
 
-            <div id="resultsSection" style="display: none; animation: fadeIn 0.5s ease;">
-                <div class="glass-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2>Analysis Results</h2>
-                        <div id="statsBadge"
-                            style="font-family: 'JetBrains Mono', monospace; color: var(--text-muted); font-size: 12px;">
-                        </div>
-                    </div>
+        <!-- Recent Activity Feed -->
+        <section class="activity-section">
+            <h3 class="section-title">Recent Analysis</h3>
+            <div id="historyList" class="activity-feed">
+                <!-- Javascript will populate this -->
+                <div class="empty-state">
+                    <div class="empty-icon">📫</div>
+                    <p>No analysis history yet</p>
+                </div>
+            </div>
+        </section>
 
-                    <div class="table-container">
-                        <table id="resultsTable">
-                            <thead>
-                                <tr>
-                                    <th>Transaction ID</th>
-                                    <th>Amount</th>
-                                    <th>Description</th>
-                                    <th>Status</th>
-                                    <th>Detection Logic</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Rows -->
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- Analysis Results Modal/Sheet -->
+        <div id="results-modal" class="bottom-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-content">
+                <div class="sheet-header">
+                    <h2>Analysis Results</h2>
+                    <button class="close-btn" onclick="closeResults()">×</button>
+                </div>
+                
+                <div id="statsBadge" class="stats-badge"></div>
+                
+                <div class="table-wrapper">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Desc</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
         </div>
+
+        <!-- Manual Entry Modal -->
+        <div id="manual-modal" class="modal-overlay">
+            <div class="modal-card animate-pop">
+                <h3>New Analysis</h3>
+                <p class="modal-subtitle">Paste transaction data below</p>
+                <textarea id="transactionInput" placeholder="1001, 500, Crypto Buy&#10;2002, 120, Groceries"></textarea>
+                <div class="modal-actions">
+                    <button class="secondary-btn" onclick="closeModal('manual')">Cancel</button>
+                    <button class="primary-btn" onclick="analyzeTransactions('manual')">Run Scan</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // --- Welcome Screen Logic ---
+        // --- Navigation / UI Logic ---
         function enterApp() {
-            const welcome = document.getElementById('welcome-screen');
-            const app = document.getElementById('app-container');
-
-            welcome.classList.add('hidden');
-            app.classList.add('visible');
-
-            // Remove from DOM after animation helps performance
+            document.getElementById('welcome-screen').style.opacity = '0';
             setTimeout(() => {
-                welcome.style.display = 'none';
-            }, 1000);
+                document.getElementById('welcome-screen').style.display = 'none';
+            }, 500);
         }
 
-        // Listen for Enter key
-        document.addEventListener('keydown', function (event) {
-            const welcome = document.getElementById('welcome-screen');
-            // Only allow enter if authenticated (button exists)
-            const enterBtn = document.querySelector('button.enter-prompt');
-            if (event.key === 'Enter' && !welcome.classList.contains('hidden') && enterBtn) {
-                enterApp();
+        function triggerFileUpload() {
+            document.getElementById('csvFile').click();
+        }
+
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                analyzeTransactions('file', input.files[0]);
             }
-        });
+        }
 
+        function openModal(id) {
+            document.getElementById(id + '-modal').style.display = 'flex';
+        }
 
-        // --- Main App Logic ---
+        function closeModal(id) {
+            document.getElementById(id + '-modal').style.display = 'none';
+        }
+
+        function closeResults() {
+            const sheet = document.getElementById('results-modal');
+            sheet.classList.remove('active');
+        }
+
+        // --- Core App Logic ---
 
         const currentUsername = "{{ current_user.username if current_user.is_authenticated else 'guest' }}";
-        // REMOVED: const STORAGE_KEY = ... (No longer using LocalStorage)
-        let history = []; // Will be populated from Server
+        let history = []; 
 
-        // Initial Load
         if (currentUsername !== 'guest') {
             fetchHistory();
         }
@@ -427,167 +215,131 @@
             }
         }
 
-        async function analyzeTransactions() {
-            const inputEl = document.getElementById('transactionInput');
-            const fileEl = document.getElementById('csvFile');
-            const btn = document.getElementById('analyzeBtn');
-            
-            const manualData = inputEl.value.trim();
-            const fileData = fileEl.files[0];
-
-            if (!manualData && !fileData) {
-                alert("Please enter data or upload a CSV file.");
-                return;
-            }
-
-            btn.innerHTML = 'Executing...';
-            btn.disabled = true;
-
-            // Show scanning overlay
+        async function analyzeTransactions(mode, fileData = null) {
+            let body;
+            let headers = {};
             const overlay = document.getElementById('scanning-overlay');
+
+            // Close inputs
+            closeModal('manual');
+            
+            // Show Scanner
             overlay.style.display = 'flex';
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.style.opacity = '1', 10);
-
+            
             try {
-                // Fake delay to show off animation (User requested "animated" feel)
-                await new Promise(r => setTimeout(r, 1500));
-
-                let response;
-                if (fileData) {
+                // Prepare Request
+                if (mode === 'file') {
                     const formData = new FormData();
                     formData.append('file', fileData);
-                    response = await fetch('/analyze', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    body = formData;
+                    // Fetch handles Content-Type for FormData automatically
                 } else {
-                    response = await fetch('/analyze', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ data: manualData })
-                    });
+                    const text = document.getElementById('transactionInput').value;
+                    if (!text.trim()) throw new Error("Please enter data");
+                    headers['Content-Type'] = 'application/json';
+                    body = JSON.stringify({ data: text });
                 }
 
-                if (response.status === 401) {
-                    alert("Session expired. Please login again.");
-                    window.location.href = "{{ url_for('login') }}";
-                    return;
-                }
+                // Artificial delay for UX
+                await new Promise(r => setTimeout(r, 1500));
+
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: headers,
+                    body: body
+                });
 
                 if (!response.ok) throw new Error(await response.text());
                 const results = await response.json();
 
-                // UPDATE: Instead of manually adding to array, just re-fetch from server
-                // This ensures we have the correct ID and Timestamp from the DB
                 await fetchHistory();
-                
                 renderResults(results);
-                
-                // Clear inputs
-                if (fileData) fileEl.value = '';
-                // Optional: Don't clear manual input immediately in case they want to edit
 
             } catch (error) {
-                alert("Error: " + error.message);
+                alert(error.message);
             } finally {
-                // Fade out overlay
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.style.display = 'none', 300);
-
-                btn.innerHTML = 'Run Detection Engine';
-                btn.disabled = false;
+                overlay.style.display = 'none';
+                // Clear file input
+                document.getElementById('csvFile').value = '';
             }
         }
 
         function renderResults(results) {
-            const section = document.getElementById('resultsSection');
+            const sheet = document.getElementById('results-modal');
             const tbody = document.querySelector('#resultsTable tbody');
             const stats = document.getElementById('statsBadge');
 
             tbody.innerHTML = '';
-            section.style.display = 'block';
-
             let fraudCount = 0;
-            results.forEach((t, index) => {
+
+            results.forEach(t => {
                 if (t.is_suspicious) fraudCount++;
-
-                // Staggered Animation
                 const tr = document.createElement('tr');
-                tr.style.animation = `fadeInUp 0.3s ease forwards ${index * 0.05}s`;
-                tr.style.opacity = '0'; // start hidden
-                tr.className = t.is_suspicious ? 'suspicious' : '';
-
+                tr.className = t.is_suspicious ? 'row-fraud' : 'row-clean';
                 tr.innerHTML = `
-                    <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">#${t.id}</td>
-                    <td>$${t.amount.toLocaleString()}</td>
+                    <td class="mono">#${t.id}</td>
                     <td>
-                        <div style="font-weight: 500;">${t.description}</div>
-                        ${t.time || t.payment_mode ? 
-                          `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-                             ${t.time || ''} ${t.payment_mode ? '• ' + t.payment_mode : ''}
-                           </div>` : ''}
+                        <div class="desc-main">${t.description}</div>
+                        <div class="desc-sub">${t.is_suspicious ? t.reason : 'Verified Safe'}</div>
                     </td>
+                    <td class="amount">$${t.amount}</td>
                     <td>
-                        <span class="status-badge ${t.is_suspicious ? 'status-fraud' : 'status-clean'}">
-                            ${t.is_suspicious ? 'DETECTED' : 'SAFE'}
-                        </span>
+                        <span class="dot ${t.is_suspicious ? 'red' : 'green'}"></span>
                     </td>
-                    <td style="color: var(--text-muted); font-size: 13px;">${t.reason || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            stats.innerText = `Found ${fraudCount} suspicious transactions out of ${results.length} total.`;
+            stats.innerHTML = `Found <strong style="color:var(--danger)">${fraudCount}</strong> risks in ${results.length} items.`;
+            sheet.classList.add('active');
         }
-
-        // REMOVED: function addToHistory (Not needed, server handles it)
 
         function renderHistory() {
             const container = document.getElementById('historyList');
             container.innerHTML = '';
 
             if (history.length === 0) {
-                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No history found</div>';
+                 container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📫</div>
+                        <p>No analysis history yet</p>
+                    </div>`;
                 return;
             }
 
             history.forEach(item => {
                 const el = document.createElement('div');
-                el.className = 'history-item';
-                el.onclick = () => loadHistoryItem(item);
+                el.className = 'activity-item animate-slide-up';
+                el.onclick = () => {
+                    renderResults(item.results);
+                };
+
+                // Determine icon based on fraud count
+                const icon = item.fraudCount > 0 ? '⚠️' : '✅';
+                const bgClass = item.fraudCount > 0 ? 'bg-red' : 'bg-green';
 
                 el.innerHTML = `
-                    <div class="history-time">${item.date} ${item.timestamp}</div>
-                    <div class="history-stats">
-                        <span>Items: ${item.total}</span>
-                        <span class="count-badge ${item.fraudCount > 0 ? 'sus' : ''}">${item.fraudCount} Detected</span>
+                    <div class="activity-icon ${bgClass}">${icon}</div>
+                    <div class="activity-info">
+                        <div class="activity-title">Analysis Scan</div>
+                        <div class="activity-date">${item.date} • ${item.timestamp}</div>
+                    </div>
+                    <div class="activity-amount">
+                        ${item.total} items
+                        <span class="sub-amount ${item.fraudCount > 0 ? 'text-red' : 'text-gray'}">
+                            ${item.fraudCount} Risks
+                        </span>
                     </div>
                 `;
                 container.appendChild(el);
             });
         }
 
-        function loadHistoryItem(item) {
-            document.getElementById('transactionInput').value = item.input;
-            renderResults(item.results);
-            document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
-        }
-
         async function clearHistory() {
-            if (confirm('Clear all history? This cannot be undone.')) {
-                try {
-                    const res = await fetch('/clear_history', { method: 'POST' });
-                    if (res.ok) {
-                        history = [];
-                        renderHistory();
-                    } else {
-                        alert("Failed to clear history on server.");
-                    }
-                } catch (e) {
-                    console.error(e);
-                    alert("Network error clearing history.");
-                }
+            if (confirm("Delete all history?")) {
+                await fetch('/clear_history', { method: 'POST' });
+                history = [];
+                renderHistory();
             }
         }
     </script>
